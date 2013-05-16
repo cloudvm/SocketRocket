@@ -37,6 +37,10 @@
 #import "base64.h"
 #import "NSData+SRB64Additions.h"
 
+#import <netinet/in.h>
+#import <netinet/tcp.h>
+
+
 #if OS_OBJECT_USE_OBJC_RETAIN_RELEASE
 #define sr_dispatch_retain(x)
 #define sr_dispatch_release(x)
@@ -1405,6 +1409,13 @@ static const size_t SRFrameHeaderOverhead = 32;
     dispatch_async(_workQueue, ^{
         switch (eventCode) {
             case NSStreamEventOpenCompleted: {
+
+                // set TCP_NODELAY option
+                CFDataRef nativeSocket = CFWriteStreamCopyProperty((__bridge CFWriteStreamRef)_outputStream, kCFStreamPropertySocketNativeHandle);
+                CFSocketNativeHandle *sock = (CFSocketNativeHandle *)CFDataGetBytePtr(nativeSocket);
+                setsockopt(*sock, IPPROTO_TCP, TCP_NODELAY, &(int){ 1 }, sizeof(int));
+                CFRelease(nativeSocket);
+
                 SRFastLog(@"NSStreamEventOpenCompleted %@", aStream);
                 if (self.readyState >= SR_CLOSING) {
                     return;
